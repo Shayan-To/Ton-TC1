@@ -1,7 +1,7 @@
 import "@stdlib/deploy";
 
 /*
-  TASK 2 - Proxy 
+  TASK 2 - Proxy
   Create a contract that forwards all received TONs
   to the admin contract (whose address is set in init_store).
   Message from this proxy contract to the admin contract should contain:
@@ -18,16 +18,36 @@ message(0x44) Refund {
   sender: Address;
 }
 
+struct ForwardMessage {
+  sender: Address;
+  message: Slice;
+}
+
 contract Task2 with Deployable {
   admin: Address;
 
   init(admin: Address) {
     self.admin = admin;
   }
-  
+
   receive(msg: Refund) {
+    require(sender() == self.admin, "Refund can only be initiated by admin.");
+    send(SendParameters{
+      to: msg.sender,
+      value: 0,
+      mode: SendRemainingValue,
+      bounce: false,
+      body: "Refund".asComment()
+    });
   }
 
   receive(msg: Slice) {
+    send(SendParameters{
+      to: self.admin,
+      value: 0,
+      mode: SendRemainingValue,
+      bounce: false,
+      body: ForwardMessage{sender: sender(), message: msg}.toCell()
+    });
   }
 }
